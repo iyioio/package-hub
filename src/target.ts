@@ -24,6 +24,6 @@ export function useTargetProject(projectPath:string, packageName:string, session
     createDb(target);
 
     onExit(()=>{
-        cleanDb();
+        cleanDb(target);
     })
 }
