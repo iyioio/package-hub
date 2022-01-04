@@ -21,6 +21,8 @@ function main(){
 
     let targetProjects:string[]=[];
 
+    let deleteCache=false;
+
     for(let i=2;i<process.argv.length;i++){
         const cmdArgs=takeArgs(process.argv,i+1);
         switch(process.argv[i].toLowerCase()){
@@ -32,6 +34,10 @@ function main(){
 
             case '-exit':
                 process.exit(Number(cmdArgs[0]||0));
+                break;
+
+            case '-delete-cache':
+                deleteCache=cmdArgs.length?Boolean(cmdArgs[0]):true;
                 break;
 
             case '-session':
@@ -51,7 +57,7 @@ function main(){
             case '-use':
                 for(const p of targetProjects){
                     for(const pk of cmdArgs){
-                        useTargetProject(p,pk,sessionName);
+                        useTargetProject(p,pk,deleteCache,sessionName);
                     }
                 }
                 break;
