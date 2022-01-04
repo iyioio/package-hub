@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import * as fs from 'fs';
 import { dbDir, lockDir, setVerbose, takeArgs, verbose } from './common';
-import { cleanUp, processInit } from './process';
+import { exit, processInit } from './process';
 import { useTargetProject } from './target';
 import { runHub } from './hub';
 
@@ -77,6 +77,6 @@ try{
     }else{
         console.error(chalk.red('package-hub encountered an error'),ex.message);
     }
-    cleanUp();
-    process.exit(1);
+    exit();
+    process.exitCode=1;
 }

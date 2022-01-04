@@ -5,7 +5,7 @@ import { HubConfig, PackageConfig, ProjectTarget } from "./types";
 import * as fs from 'fs';
 import { ChildProcess } from "child_process";
 import { getPackageInfo } from "./package-info";
-import { cmd, onExit } from "./process";
+import { exit, cmd, onExit, kill } from "./process";
 
 
 export function runHub(configPath:string, sessionName:string)
@@ -71,8 +71,6 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
         pkConfig.outDir=tsConfig.compilerOptions.outDir;
     }
 
-    const outDir=pkConfig.outDir?path.join(pkDir,pkConfig.outDir):null;
-
     if(pkConfig.watch===undefined){
         pkConfig.watch='watch';
     }
@@ -82,15 +80,15 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
     const {pkDbDir,lock,createDb,cleanDb}=getPackageInfo(pkConfig.name);
 
-    createDb();
-
     onExit(()=>{
         console.info(chalk.blueBright('Stop '+pkJsonPath));
-        proc?.kill();
+        kill(proc);
         update(true);
         cleanDb();
         watcher?.close();
     })
+
+    createDb();
 
     if(pkConfig.watch!==false){
         if(pk.scripts?.[pkConfig.watch]){
@@ -104,40 +102,45 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
     const targets:ProjectTarget[]=[];
 
-    const update=(exit?:boolean)=>{
-        let files:string[]=[];
-        lock(()=>{
-            files=fs.readdirSync(pkDbDir);
-        });
-        const paths:string[]=[];
+    const update=(shouldExit?:boolean)=>{
+        try{
+            let files:string[]=[];
+            lock(()=>{
+                files=fs.readdirSync(pkDbDir);
+            });
+            const paths:string[]=[];
 
-        if(!exit){
-            for(const file of files){
-                const filePath=path.join(pkDbDir,file);
-                let target:ProjectTarget;
-                try{
-                    target=loadJson<ProjectTarget>(filePath);
-                }catch(ex:any){
-                    console.error('Invalid target file - ',filePath);
+            if(!shouldExit){
+                for(const file of files){
+                    const filePath=path.join(pkDbDir,file);
+                    let target:ProjectTarget;
+                    try{
+                        target=loadJson<ProjectTarget>(filePath);
+                    }catch(ex:any){
+                        console.error('Invalid target file - ',filePath);
+                        continue;
+                    }
+                    
+                    paths.push(target.projectPath);
+                    if(!targets.find(t=>t.projectPath===target.projectPath)){
+                        targets.push(target);
+                        linkTarget(target,pkDir,entryPath);
+                    }
+                }
+            }
+
+            for(let i=0;i<targets.length;i++){
+                const target=targets[i];
+                if(paths.includes(target.projectPath)){
                     continue;
                 }
-                
-                paths.push(target.projectPath);
-                if(!targets.find(t=>t.projectPath===target.projectPath)){
-                    targets.push(target);
-                    linkTarget(target,pkDir,entryPath);
-                }
+                targets.splice(i,1);
+                i--;
+                unlinkTarget(target,pkDir,entryPath);
             }
-        }
-
-        for(let i=0;i<targets.length;i++){
-            const target=targets[i];
-            if(paths.includes(target.projectPath)){
-                continue;
-            }
-            targets.splice(i,1);
-            i--;
-            unlinkTarget(target,pkDir,entryPath);
+        }catch(ex:any){
+            console.error('update hub targets failed - '+pkConfig.name,ex);
+            exit(1);
         }
 
     }
@@ -156,7 +159,11 @@ function linkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
     const tsConfig=path.join(target.projectPath,'tsconfig.packagehub.json');
     if(fs.existsSync(tsConfig)){
         lockSync(tsConfig,()=>{
-            const tsConfigBk=tsConfig+backupExtension;
+            const dir=path.join(target.projectPath,'.packagehub');
+            const tsConfigBk=path.join(dir,'tsconfig.packagehub.json');
+            if(!fs.existsSync(dir)){
+                fs.mkdirSync(dir);
+            }
             if(!fs.existsSync(tsConfigBk)){
                 fs.copyFileSync(tsConfig,tsConfigBk);
             }
@@ -176,7 +183,7 @@ function linkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
             config.compilerOptions.paths[target.packageName].push(entryPath);
             saveJson(tsConfig,config,2);
 
-            const refPath=path.join(target.projectPath,'.packagehub-ref-count');
+            const refPath=path.join(dir,'ref-count');
             const refCount=(tryLoadJson<number>(refPath)||0)+1;
             saveJson(refPath,refCount);
         });
@@ -213,16 +220,17 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
     if(fs.existsSync(tsConfig)){
         lockSync(tsConfig,()=>{
 
-            const refPath=path.join(target.projectPath,'.packagehub-ref-count');
+            const dir=path.join(target.projectPath,'.packagehub');
+
+            const refPath=path.join(dir,'ref-count');
             const refCount=(tryLoadJson<number>(refPath)||0)-1;
 
             if(refCount<=0){
-                fs.unlinkSync(refPath);
-                const tsConfigBk=tsConfig+backupExtension;
+                const tsConfigBk=path.join(dir,'tsconfig.packagehub.json');
                 if(fs.existsSync(tsConfigBk)){
                     fs.copyFileSync(tsConfigBk,tsConfig);
-                    fs.unlinkSync(tsConfigBk)
                 }
+                fs.rmSync(dir,{recursive:true,force:true})
             }else{
                 saveJson(refPath,refCount);
                 let config=tryLoadJson<any>(tsConfig);
@@ -237,8 +245,6 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
                 }
 
             }
-
-            
             
         });
     }

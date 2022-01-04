@@ -37,10 +37,10 @@ export function useTargetProject(projectPath:string, packageName:string, deleteC
 
     const {createDb,cleanDb}=getPackageInfo(packageName);
 
-    createDb(target);
-
     onExit(()=>{
         cleanDb(target);
         _deleteCache();
     })
+
+    createDb(target);
 }

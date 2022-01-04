@@ -91,3 +91,11 @@ export function printCmd(name:string,content:string,error:boolean){
     }
     stdout.write(content);
 }
+
+export function sleep(milliseconds:number){
+    const date=Date.now();
+    let currentDate=0;
+    do{
+        currentDate=Date.now();
+    }while(currentDate-date<milliseconds);
+}
