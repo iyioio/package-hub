@@ -4,7 +4,6 @@
   "description": "Example math package",
   "main": "dist/math.js",
   "types": "dist/math.d.ts",
-  "packagehubEntry": "math.ts",
   "scripts": {
     "build": "tsc",
     "build-publish": "npm run build && npm publish",
