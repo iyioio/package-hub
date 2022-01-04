@@ -1,0 +1,28 @@
+{
+  "name": "package-hub",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/package-hub.js",
+  "types": "dist/package-hub.d.ts",
+  "scripts": {
+    "start": "ts-node package-hub.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "Scott Vance",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^17.0.6",
+    "@types/proper-lockfile": "^4.1.2",
+    "@types/uuid": "^8.3.3",
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "comment-json": "^4.1.1",
+    "proper-lockfile": "^4.1.2",
+    "uuid": "^8.3.2"
+  }
+}

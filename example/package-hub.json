@@ -1,0 +1,10 @@
+{
+    "packages":[
+        {
+            "path":"packages/math"
+        },
+        {
+            "path":"packages/strings"
+        }
+    ]
+}

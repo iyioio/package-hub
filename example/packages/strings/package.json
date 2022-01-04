@@ -1,0 +1,20 @@
+{
+  "name": "@iyio/example-project-strings",
+  "version": "1.1.0",
+  "description": "Example strings package",
+  "main": "dist/strings.js",
+  "types": "dist/strings.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build-publish": "npm run build && npm publish",
+    "watch":"tsc --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.4"
+  }
+}
