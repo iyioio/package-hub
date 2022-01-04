@@ -15,8 +15,9 @@ libraries with support for hot-reloading and code navigation.
 ### Using packagehub-config.json
 This example uses a configuration file to build a script the 
 
+
+pkhub-config.json
 ``` json
-// packagehub-config.json
 {
     "verbose":true,
     "deleteCache":true,
@@ -31,7 +32,7 @@ This example uses a configuration file to build a script the
         "@iyio/example-project-strings"
     ],
     "args":[
-        
+
     ]
 }
 ```
