@@ -49,14 +49,31 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
     const pk=loadJson<any>(pkJsonPath);
 
-
-    const entryFile=pk?.packagehubEntry||pk?.entry||pk?.main;
-    const entryPath=entryFile?path.join(pkDir,entryFile):pkDir;
-
-
     const tsConfigPath=path.join(pkDir,'tsconfig.json');
     const isTs=fs.statSync(tsConfigPath).isFile();
     const tsConfig=isTs?loadJson<any>(tsConfigPath):null;
+
+
+    let entryFile=pk?.packagehubEntry||pk?.entry;
+    if(!entryFile && pk?.main){
+        const parts:string[]=pk.main.split('/');
+        parts.shift();
+        if(parts.length && isTs){
+            let n=parts[parts.length-1];
+            const i=n.lastIndexOf('.');
+            if(i!==-1){
+                n=n.substr(0,i)+'.ts';
+            }
+            parts[parts.length-1]=n;
+        }
+        entryFile=path.join(pkDir,parts.join('/'))
+    }
+
+    const entryPath=entryFile?
+        path.isAbsolute(entryFile)?entryFile:path.join(pkDir,entryFile):
+        pkDir;
+
+
 
 
     if(!pkConfig.name && pk.name){
@@ -245,7 +262,7 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
                 }
 
             }
-            
+
         });
     }
 }
