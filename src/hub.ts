@@ -160,10 +160,10 @@ function linkTarget(target:ProjectTarget, pkDir:string)
             if(typeof config !== 'object'){
                 config={}
             }
-            if(config.compilerOptions !== 'object'){
+            if(typeof config.compilerOptions !== 'object'){
                 config.compilerOptions={};
             }
-            if(config.compilerOptions.paths !== 'object'){
+            if(typeof config.compilerOptions.paths !== 'object'){
                 config.compilerOptions.paths={};
             }
             if(!Array.isArray(config.compilerOptions.paths[target.packageName])){
