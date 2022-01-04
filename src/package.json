@@ -1,5 +1,5 @@
 {
-  "name": "package-hub",
+  "name": "@iyio/package-hub",
   "version": "0.1.0",
   "description": "A tool to simplify package sharing in mono-repos and packages outside of a project's root directory",
   "main": "dist/package-hub.js",
