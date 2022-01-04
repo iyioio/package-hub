@@ -52,3 +52,15 @@ export interface PackageInfo
     createDb:(addPackage?:ProjectTarget)=>void;
     cleanDb:(removePackage?:ProjectTarget)=>void;
 }
+
+export interface ArgConfig {
+    session?:string;
+    exit?:number;
+    verbose?:boolean;
+    deleteCache?:boolean;
+    hubs?:string[];
+    targets?:string[];
+    use?:string[];
+    args?:string[];
+    extends?:string[];
+}
