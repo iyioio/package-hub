@@ -42,7 +42,7 @@ export function onExit(callback:()=>void)
     }
 }
 
-export function exit(code?:number)
+export function exit(code?:number, quite?:boolean)
 {
     if(isExiting){
         return;
@@ -53,7 +53,9 @@ export function exit(code?:number)
     }
     const listeners=exitListeners;
     exitListeners=[];
-    console.log(chalk.blue(`\nEnding ${listeners.length} task(s) with code ${code||0}`));
+    if(!quite){
+        console.log(chalk.blue(`\nEnding ${listeners.length} task(s) with code ${code||0}`));
+    }
     for(const d of listeners){
         try{
             d();

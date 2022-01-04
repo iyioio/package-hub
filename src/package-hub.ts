@@ -8,6 +8,7 @@ import { useTargetProject } from './target';
 import { runHub } from './hub';
 import { ArgConfig } from './types';
 import path from 'path';
+import { initMetroTemplate, loadExtraNodeModules, metroConfigFile } from './metro-template';
 
 
 function main(){
@@ -28,6 +29,8 @@ function main(){
     let deleteCache=false;
 
     let args=[...process.argv];
+
+    let keepAlive=false;
 
     args.splice(0,2);
 
@@ -67,6 +70,7 @@ function main(){
                 break;
 
             case "-hub":
+                keepAlive=true;
                 for(const a of cmdArgs){
                     runHub(a,sessionName);
                 }
@@ -77,6 +81,7 @@ function main(){
                 break;
             
             case '-use':
+                keepAlive=true;
                 for(const p of targetProjects){
                     for(const pk of cmdArgs){
                         useTargetProject(p,pk,deleteCache,sessionName);
@@ -84,10 +89,22 @@ function main(){
                 }
                 break;
 
+            case '-init-metro':
+                initMetroTemplate(cmdArgs[0]||'.');
+                break;
+
+            case '-get-metro-modules':
+                console.log(loadExtraNodeModules(path.join(cmdArgs[0]||'.',metroConfigFile)));
+                break;
+
             default:
                 throw new Error(`Unknown arg [${args[i].toLowerCase()}]`)
         }
         i+=cmdArgs.length;
+    }
+
+    if(!keepAlive){
+        exit(0,true);
     }
 }
 

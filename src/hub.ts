@@ -1,11 +1,12 @@
 import chalk from "chalk";
 import path from "path";
-import { backupExtension, loadJson, lockSync, saveJson, tryLoadJson } from "./common";
+import { loadJson, lockSync, saveJson, tryLoadJson } from "./common";
 import { HubConfig, PackageConfig, ProjectTarget } from "./types";
 import * as fs from 'fs';
 import { ChildProcess } from "child_process";
 import { getPackageInfo } from "./package-info";
 import { exit, cmd, onExit, kill } from "./process";
+import { addMetroPackage, metroConfigFile, removeMetroPackage } from "./metro-template";
 
 
 export function runHub(configPath:string, sessionName:string)
@@ -91,6 +92,8 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
     if(pkConfig.watch===undefined){
         pkConfig.watch='watch';
     }
+
+    const distPath=pkConfig.outDir?path.join(pkDir,pkConfig.outDir):pkDir;
     
     let proc:ChildProcess|null=null;
     let watcher:fs.FSWatcher|null=null;
@@ -141,7 +144,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
                     paths.push(target.projectPath);
                     if(!targets.find(t=>t.projectPath===target.projectPath)){
                         targets.push(target);
-                        linkTarget(target,pkDir,entryPath);
+                        linkTarget(target,pkDir,distPath,entryPath);
                     }
                 }
             }
@@ -169,7 +172,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
     update();
 }
 
-function linkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
+function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, entryPath:string)
 {
     console.info(chalk.cyanBright(`link ${target.packageName} - ${pkDir} -> ${target.nodeModulePath}`))
     
@@ -199,6 +202,11 @@ function linkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
             }
             config.compilerOptions.paths[target.packageName].push(entryPath);
             saveJson(tsConfig,config,2);
+
+            const metroPath=path.join(target.projectPath,metroConfigFile);
+            if(fs.existsSync(metroPath)){
+                addMetroPackage(metroPath,target.packageName,distPath);
+            }
 
             const refPath=path.join(dir,'ref-count');
             const refCount=(tryLoadJson<number>(refPath)||0)+1;
@@ -231,6 +239,11 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
         }else{
             fs.renameSync(target.nodeModuleBackupPath,target.nodeModulePath);
         }
+    }
+
+    const metroPath=path.join(target.projectPath,metroConfigFile);
+    if(fs.existsSync(metroPath)){
+        removeMetroPackage(metroPath,target.packageName);
     }
 
     const tsConfig=path.join(target.projectPath,'tsconfig.packagehub.json');
