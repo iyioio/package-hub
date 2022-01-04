@@ -3,6 +3,7 @@ import path from "path";
 import { loadJson, lockSync, saveJson, tryLoadJson } from "./common";
 import { HubConfig, PackageConfig, ProjectTarget } from "./types";
 import * as fs from 'fs';
+import fse from 'fs-extra';
 import { ChildProcess } from "child_process";
 import { getPackageInfo } from "./package-info";
 import { exit, cmd, onExit, kill } from "./process";
@@ -94,9 +95,11 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
     }
 
     const distPath=pkConfig.outDir?path.join(pkDir,pkConfig.outDir):pkDir;
+    const relativeOutDir=pkConfig.outDir||'.';
     
     let proc:ChildProcess|null=null;
-    let watcher:fs.FSWatcher|null=null;
+    let dbWatcher:fs.FSWatcher|null=null;
+    let distWatcher:fs.FSWatcher|null=null;
 
     const {pkDbDir,lock,createDb,cleanDb}=getPackageInfo(pkConfig.name);
 
@@ -105,7 +108,8 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
         kill(proc);
         update(true);
         cleanDb();
-        watcher?.close();
+        dbWatcher?.close();
+        distWatcher?.close();
     })
 
     createDb();
@@ -144,7 +148,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
                     paths.push(target.projectPath);
                     if(!targets.find(t=>t.projectPath===target.projectPath)){
                         targets.push(target);
-                        linkTarget(target,pkDir,distPath,entryPath);
+                        linkTarget(target,pkDir,distPath,relativeOutDir,entryPath);
                     }
                 }
             }
@@ -165,14 +169,32 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
     }
 
-    watcher=fs.watch(pkDbDir,null,(e)=>{
+    dbWatcher=fs.watch(pkDbDir,null,()=>{
         setTimeout(update,100);
     });
+
+    distWatcher=fs.watch(distPath,{recursive:true},(e,filename)=>{
+        const fullName=path.join(distPath,filename);
+        const exists=fs.existsSync(fullName);
+        for(const target of targets){
+            if(!target.copyDist){
+                continue;
+            }
+
+            const dest=path.join(target.nodeModulePath,relativeOutDir,filename);
+            if(exists){
+                fse.copySync(fullName,dest);
+            }else{
+                fs.rmSync(dest,{recursive:true,force:true})
+            }
+
+        }
+    })
 
     update();
 }
 
-function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, entryPath:string)
+function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:string, entryPath:string)
 {
     console.info(chalk.cyanBright(`link ${target.packageName} - ${pkDir} -> ${target.nodeModulePath}`))
     
@@ -200,7 +222,9 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, entryPa
             if(!Array.isArray(config.compilerOptions.paths[target.packageName])){
                 config.compilerOptions.paths[target.packageName]=[];
             }
-            config.compilerOptions.paths[target.packageName].push(entryPath);
+            if(!config.compilerOptions.paths[target.packageName].includes(entryPath)){
+                config.compilerOptions.paths[target.packageName].push(entryPath);
+            }
             saveJson(tsConfig,config,2);
 
             const metroPath=path.join(target.projectPath,metroConfigFile);
@@ -214,7 +238,7 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, entryPa
         });
     }
 
-    if(!target.noSymlink){
+    if(!target.noSymlink || target.copyDist){
         if(target.nodeModuleBackupPath && !fs.existsSync(target.nodeModuleBackupPath))
         {
             if(fs.existsSync(target.nodeModulePath)){
@@ -224,7 +248,15 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, entryPa
             }
         }
 
-        fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
+        if(!target.noSymlink){
+            fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
+        }
+
+        if(target.copyDist){
+            fs.mkdirSync(target.nodeModulePath);
+            fs.copyFileSync(path.join(pkDir,'package.json'),path.join(target.nodeModulePath,'package.json'))
+            fse.copySync(distPath,path.join(target.nodeModulePath,outDir))
+        }
     }
 }
 
@@ -232,8 +264,13 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
 {
     console.info(chalk.cyanBright(`unlink ${target.packageName} - ${target.nodeModulePath}`));
 
-    if(!target.noSymlink){
-        fs.unlinkSync(target.nodeModulePath);
+    if(!target.noSymlink || target.copyDist){
+        if(!target.noSymlink){
+            fs.unlinkSync(target.nodeModulePath);
+        }
+        if(target.copyDist){
+            fs.rmSync(target.nodeModulePath,{recursive:true,force:true})
+        }
 
         if(target.nodeModuleBackupPath && fs.existsSync(target.nodeModuleBackupPath))
         {
@@ -271,10 +308,15 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
                 if(typeof config !== 'object'){
                     config={}
                 }
-                const ary:string[]=config.compilerOptions?.paths?.[target.packageName];
-                const i=ary?.indexOf(entryPath);
-                if(i!==undefined && i!==-1){
-                    ary.splice(i,1);
+                const ary:string[]|undefined=config.compilerOptions?.paths?.[target.packageName];
+                if(ary){
+                    while(true){
+                        const i=ary.indexOf(entryPath);
+                        if(i===-1){
+                            break;
+                        }
+                        ary.splice(i,1);
+                    }
                     saveJson(tsConfig,config,2);
                 }
 

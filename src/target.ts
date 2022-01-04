@@ -27,13 +27,16 @@ export function useTargetProject(projectPath:string, packageName:string, deleteC
 
     _deleteCache();
 
+    const isMetro=fs.existsSync(path.join(projectPath,'metro.config.js'));
+
     const target:ProjectTarget={
         id,
         projectPath,
         packageName,
         nodeModulePath:np,
         nodeModuleBackupPath:np+backupExtension,
-        noSymlink:fs.existsSync(path.join(projectPath,'metro.config.js'))
+        noSymlink:isMetro,
+        copyDist:isMetro
     }
 
     const {createDb,cleanDb}=getPackageInfo(packageName);

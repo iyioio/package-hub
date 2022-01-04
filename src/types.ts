@@ -42,6 +42,7 @@ export interface ProjectTarget
     nodeModuleBackupPath?:string;
     packageName:string;
     noSymlink?:boolean;
+    copyDist?:boolean;
 }
 
 export interface PackageInfo

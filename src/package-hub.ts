@@ -111,6 +111,7 @@ function main(){
 function loadConfig(configPath:string):string[]
 {
     const config=loadJson<ArgConfig>(configPath);
+    console.log(config)
     const dir=path.dirname(configPath);
 
     let args:string[]=[];

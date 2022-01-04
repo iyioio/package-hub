@@ -18,10 +18,14 @@
   "bin": {
     "pkhub": "dist/package-hub.js"
   },
-  "keywords": ["monorepo","mono-repo"],
+  "keywords": [
+    "monorepo",
+    "mono-repo"
+  ],
   "author": "Scott Vance",
   "license": "ISC",
   "devDependencies": {
+    "@types/fs-extra": "^9.0.13",
     "@types/node": "^17.0.6",
     "@types/proper-lockfile": "^4.1.2",
     "@types/uuid": "^8.3.3",
@@ -32,6 +36,7 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "comment-json": "^4.1.1",
+    "fs-extra": "^10.0.0",
     "proper-lockfile": "^4.1.2",
     "uuid": "^8.3.2"
   }
