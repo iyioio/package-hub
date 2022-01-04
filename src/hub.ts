@@ -214,30 +214,34 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, entryPa
         });
     }
 
-    if(target.nodeModuleBackupPath && !fs.existsSync(target.nodeModuleBackupPath))
-    {
-        if(fs.existsSync(target.nodeModulePath)){
-            fs.renameSync(target.nodeModulePath,target.nodeModuleBackupPath);
-        }else{
-            fs.mkdirSync(target.nodeModuleBackupPath,{recursive:true})
+    if(!target.noSymlink){
+        if(target.nodeModuleBackupPath && !fs.existsSync(target.nodeModuleBackupPath))
+        {
+            if(fs.existsSync(target.nodeModulePath)){
+                fs.renameSync(target.nodeModulePath,target.nodeModuleBackupPath);
+            }else{
+                fs.mkdirSync(target.nodeModuleBackupPath,{recursive:true})
+            }
         }
-    }
 
-    fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
+        fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
+    }
 }
 
 function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
 {
     console.info(chalk.cyanBright(`unlink ${target.packageName} - ${target.nodeModulePath}`));
 
-    fs.unlinkSync(target.nodeModulePath);
+    if(!target.noSymlink){
+        fs.unlinkSync(target.nodeModulePath);
 
-    if(target.nodeModuleBackupPath && fs.existsSync(target.nodeModuleBackupPath))
-    {
-        if(fs.readdirSync(target.nodeModuleBackupPath).length===0){
-            fs.rmdirSync(target.nodeModuleBackupPath);
-        }else{
-            fs.renameSync(target.nodeModuleBackupPath,target.nodeModulePath);
+        if(target.nodeModuleBackupPath && fs.existsSync(target.nodeModuleBackupPath))
+        {
+            if(fs.readdirSync(target.nodeModuleBackupPath).length===0){
+                fs.rmdirSync(target.nodeModuleBackupPath);
+            }else{
+                fs.renameSync(target.nodeModuleBackupPath,target.nodeModulePath);
+            }
         }
     }
 
