@@ -1,14 +1,25 @@
 {
   "name": "package-hub",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "A tool to simplify package sharing in mono-repos and packages outside of a project's root directory",
   "main": "dist/package-hub.js",
   "types": "dist/package-hub.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iyioio/package-hub.git"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "start": "ts-node package-hub.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "build-publish": "npm run build && npm publish"
   },
-  "keywords": [],
+  "bin": {
+    "pkhub": "dist/package-hub.js"
+  },
+  "keywords": ["monorepo","mono-repo"],
   "author": "Scott Vance",
   "license": "ISC",
   "devDependencies": {
