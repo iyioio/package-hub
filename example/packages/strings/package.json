@@ -4,6 +4,7 @@
   "description": "Example strings package",
   "main": "dist/strings.js",
   "types": "dist/strings.d.ts",
+  "packagehubEntry": "strings.ts",
   "scripts": {
     "build": "tsc",
     "build-publish": "npm run build && npm publish",

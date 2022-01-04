@@ -50,6 +50,10 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
     const pk=loadJson<any>(pkJsonPath);
 
 
+    const entryFile=pk?.packagehubEntry||pk?.entry||pk?.main;
+    const entryPath=entryFile?path.join(pkDir,entryFile):pkDir;
+
+
     const tsConfigPath=path.join(pkDir,'tsconfig.json');
     const isTs=fs.statSync(tsConfigPath).isFile();
     const tsConfig=isTs?loadJson<any>(tsConfigPath):null;
@@ -121,7 +125,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
                 paths.push(target.projectPath);
                 if(!targets.find(t=>t.projectPath===target.projectPath)){
                     targets.push(target);
-                    linkTarget(target,pkDir);
+                    linkTarget(target,pkDir,entryPath);
                 }
             }
         }
@@ -133,7 +137,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
             }
             targets.splice(i,1);
             i--;
-            unlinkTarget(target,pkDir);
+            unlinkTarget(target,pkDir,entryPath);
         }
 
     }
@@ -145,7 +149,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
     update();
 }
 
-function linkTarget(target:ProjectTarget, pkDir:string)
+function linkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
 {
     console.info(chalk.cyanBright(`link ${target.packageName} - ${pkDir} -> ${target.nodeModulePath}`))
     
@@ -169,7 +173,7 @@ function linkTarget(target:ProjectTarget, pkDir:string)
             if(!Array.isArray(config.compilerOptions.paths[target.packageName])){
                 config.compilerOptions.paths[target.packageName]=[];
             }
-            config.compilerOptions.paths[target.packageName].push(pkDir);
+            config.compilerOptions.paths[target.packageName].push(entryPath);
             saveJson(tsConfig,config,2);
 
             const refPath=path.join(target.projectPath,'.packagehub-ref-count');
@@ -190,7 +194,7 @@ function linkTarget(target:ProjectTarget, pkDir:string)
     fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
 }
 
-function unlinkTarget(target:ProjectTarget, pkDir:string)
+function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
 {
     console.info(chalk.cyanBright(`unlink ${target.packageName} - ${target.nodeModulePath}`));
 
@@ -226,7 +230,7 @@ function unlinkTarget(target:ProjectTarget, pkDir:string)
                     config={}
                 }
                 const ary:string[]=config.compilerOptions?.paths?.[target.packageName];
-                const i=ary?.indexOf(pkDir);
+                const i=ary?.indexOf(entryPath);
                 if(i!==undefined && i!==-1){
                     ary.splice(i,1);
                     saveJson(tsConfig,config,2);
