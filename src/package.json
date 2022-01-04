@@ -1,6 +1,6 @@
 {
   "name": "@iyio/package-hub",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A tool to simplify package sharing in mono-repos and packages outside of a project's root directory",
   "main": "dist/package-hub.js",
   "types": "dist/package-hub.d.ts",
@@ -12,7 +12,6 @@
     "dist"
   ],
   "scripts": {
-    "start": "ts-node package-hub.ts",
     "build": "tsc",
     "build-publish": "npm run build && npm publish"
   },
