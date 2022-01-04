@@ -33,6 +33,10 @@ function main(){
         args.unshift('-config')
     }
 
+    if(args.length===0){
+        args=['-config','pkhub-config.json'];
+    }
+
     for(let i=0;i<args.length;i++){
         const cmdArgs=takeArgs(args,i+1);
         switch(args[i].toLowerCase()){
@@ -88,6 +92,7 @@ function main(){
 function loadConfig(configPath:string):string[]
 {
     const config=loadJson<ArgConfig>(configPath);
+    const dir=path.dirname(configPath);
 
     let args:string[]=[];
 
@@ -108,15 +113,15 @@ function loadConfig(configPath:string):string[]
 
     if(config.hubs!==undefined){
         args.push('-hub');
-        for(const h of config.hubs){
-            args.push(h);
+        for(const p of config.hubs){
+            args.push(path.isAbsolute(p)?p:path.join(dir,p));
         }
     }
 
     if(config.targets!==undefined){
         args.push('-target');
-        for(const t of config.targets){
-            args.push(t);
+        for(const p of config.targets){
+            args.push(path.isAbsolute(p)?p:path.join(dir,p));
         }
     }
 
@@ -133,9 +138,8 @@ function loadConfig(configPath:string):string[]
 
     if(config.extends!==undefined){
         args.push("-config");
-        const dir=path.dirname(configPath);
-        for(const e of config.extends){
-            args.push(path.isAbsolute(e)?e:path.join(dir,e));
+        for(const p of config.extends){
+            args.push(path.isAbsolute(p)?p:path.join(dir,p));
         }
     }
 
