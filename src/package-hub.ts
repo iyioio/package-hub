@@ -116,6 +116,10 @@ function loadConfig(configPath:string):string[]
 
     let args:string[]=[];
 
+    if(config.preArgs!==undefined){
+        args=[...args,...config.preArgs]
+    }
+
     if(config.session!==undefined){
         args.push('-session');
         args.push(config.session)

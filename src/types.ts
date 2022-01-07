@@ -64,5 +64,6 @@ export interface ArgConfig {
     targets?:string[];
     use?:string[];
     args?:string[];
+    preArgs?:string[];
     extends?:string[];
 }
