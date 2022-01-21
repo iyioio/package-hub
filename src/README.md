@@ -68,3 +68,24 @@ Hubs define the location of packages
     ]
 }
 ```
+
+## Clean up
+If the pkhub command is not shutdown gracefully target projects can be left in a non operational
+state. To fix this run pkhub with the -clean flag. Make sure the first argument is the -clean flag.
+The order of the arguments are important
+``` sh
+
+# clean projects based on the local config file
+npx pkhub -clean
+
+# clean projects based on a specific config file
+npx pkhub -clean -config some-other-config.json
+
+# clean projects based on a previous arguments.
+# This command is identical to the "Using cli arguments" example with the exception that the first
+# argument is -clean.
+npx pkhub -clean -verbose -delete-cache \
+    -hub ./example \
+    -target ./example/cool-web-site/ \
+    -use @iyio/example-project-math @iyio/example-project-strings
+```

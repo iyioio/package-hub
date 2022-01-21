@@ -44,6 +44,10 @@ function main(){
         args=['-config','pkhub-config.json'];
     }
 
+    if(args.length===1 && args[0]==='-clean'){
+        args=['-clean','-config','pkhub-config.json'];
+    }
+
     for(let i=0;i<args.length;i++){
         const cmdArgs=takeArgs(args,i+1);
         switch(args[i].toLowerCase()){
