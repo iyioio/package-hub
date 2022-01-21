@@ -1,13 +1,13 @@
 import chalk from "chalk";
-import path from "path";
-import { loadJson, lockSync, saveJson, tryLoadJson } from "./common";
-import { HubConfig, PackageConfig, ProjectTarget } from "./types";
+import { ChildProcess } from "child_process";
 import * as fs from 'fs';
 import fse from 'fs-extra';
-import { ChildProcess } from "child_process";
-import { getPackageInfo } from "./package-info";
-import { exit, cmd, onExit, kill } from "./process";
+import path from "path";
+import { loadJson, lockSync, saveJson, tryLoadJson } from "./common";
 import { addMetroPackage, metroConfigFile, removeMetroPackage } from "./metro-template";
+import { getPackageInfo } from "./package-info";
+import { cmd, exit, kill, onExit } from "./process";
+import { HubConfig, PackageConfig, ProjectTarget } from "./types";
 
 
 export function runHub(configPath:string, sessionName:string)
@@ -17,7 +17,7 @@ export function runHub(configPath:string, sessionName:string)
         configPath=path.join(configPath,'package-hub.json');
     }
 
-    if(!fs.statSync(configPath).isFile()){
+    if(!fs.existsSync(configPath)){
         throw new Error(configPath+' does not exist');
     }
 
@@ -43,7 +43,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
     const pkDir=path.resolve(path.dirname(pkJsonPath));
 
-    if(!fs.statSync(pkJsonPath).isFile()){
+    if(!fs.existsSync(pkJsonPath)){
         throw new Error(pkJsonPath+' does not exist');
     }
 
@@ -52,7 +52,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
     const pk=loadJson<any>(pkJsonPath);
 
     const tsConfigPath=path.join(pkDir,'tsconfig.json');
-    const isTs=fs.statSync(tsConfigPath).isFile();
+    const isTs=fs.existsSync(tsConfigPath);
     const tsConfig=isTs?loadJson<any>(tsConfigPath):null;
 
 
@@ -64,7 +64,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
             let n=parts[parts.length-1];
             const i=n.lastIndexOf('.');
             if(i!==-1){
-                n=n.substr(0,i)+'.ts';
+                n=n.substring(0,i)+'.ts';
             }
             parts[parts.length-1]=n;
         }
@@ -103,14 +103,17 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
     const {pkDbDir,lock,createDb,cleanDb}=getPackageInfo(pkConfig.name);
 
-    onExit(()=>{
+
+    const cleanup=()=>{
         console.info(chalk.blueBright('Stop '+pkJsonPath));
         kill(proc);
         update(true);
         cleanDb();
         dbWatcher?.close();
         distWatcher?.close();
-    })
+    }
+
+    onExit(cleanup)
 
     createDb();
 
@@ -160,7 +163,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
                 }
                 targets.splice(i,1);
                 i--;
-                unlinkTarget(target,pkDir,entryPath);
+                unlinkTarget(target,entryPath);
             }
         }catch(ex:any){
             console.error('update hub targets failed - '+pkConfig.name,ex);
@@ -198,14 +201,21 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
 {
     console.info(chalk.cyanBright(`link ${target.packageName} - ${pkDir} -> ${target.nodeModulePath}`))
     
+    const packagePath=path.join(target.projectPath,'package.json');
+    if(!fs.existsSync(packagePath)){
+        fs.writeFileSync(packagePath,'{}');
+    }
+
     const tsConfig=path.join(target.projectPath,'tsconfig.packagehub.json');
-    if(fs.existsSync(tsConfig)){
-        lockSync(tsConfig,()=>{
-            const dir=path.join(target.projectPath,'.packagehub');
+
+    lockSync(packagePath,()=>{
+        const dir=path.join(target.projectPath,'.packagehub');
+        if(!fs.existsSync(dir)){
+            fs.mkdirSync(dir);
+        }
+        const isTs=fs.existsSync(tsConfig);
+        if(isTs){
             const tsConfigBk=path.join(dir,'tsconfig.packagehub.json');
-            if(!fs.existsSync(dir)){
-                fs.mkdirSync(dir);
-            }
             if(!fs.existsSync(tsConfigBk)){
                 fs.copyFileSync(tsConfig,tsConfigBk);
             }
@@ -226,17 +236,17 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
                 config.compilerOptions.paths[target.packageName].push(entryPath);
             }
             saveJson(tsConfig,config,2);
+        }
 
-            const metroPath=path.join(target.projectPath,metroConfigFile);
-            if(fs.existsSync(metroPath)){
-                addMetroPackage(metroPath,target.packageName,distPath);
-            }
+        const metroPath=path.join(target.projectPath,metroConfigFile);
+        if(fs.existsSync(metroPath)){
+            addMetroPackage(metroPath,target.packageName,distPath);
+        }
 
-            const refPath=path.join(dir,'ref-count');
-            const refCount=(tryLoadJson<number>(refPath)||0)+1;
-            saveJson(refPath,refCount);
-        });
-    }
+        const refPath=path.join(dir,'ref-count');
+        const refCount=(tryLoadJson<number>(refPath)||0)+1;
+        saveJson(refPath,refCount);
+    });
 
     if(!target.noSymlink || target.copyDist){
         if(target.nodeModuleBackupPath && !fs.existsSync(target.nodeModuleBackupPath))
@@ -260,7 +270,13 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
     }
 }
 
-function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
+export function isTargetLinked(target:ProjectTarget)
+{
+    const dir=path.join(target.projectPath,'.packagehub');
+    return fs.existsSync(dir);
+}
+
+export function unlinkTarget(target:ProjectTarget, entryPath?:string)
 {
     console.info(chalk.cyanBright(`unlink ${target.packageName} - ${target.nodeModulePath}`));
 
@@ -288,8 +304,9 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
     }
 
     const tsConfig=path.join(target.projectPath,'tsconfig.packagehub.json');
-    if(fs.existsSync(tsConfig)){
-        lockSync(tsConfig,()=>{
+    const packagePath=path.join(target.projectPath,'package.json');
+    if(fs.existsSync(packagePath)){
+        lockSync(packagePath,()=>{
 
             const dir=path.join(target.projectPath,'.packagehub');
 
@@ -304,20 +321,22 @@ function unlinkTarget(target:ProjectTarget, pkDir:string, entryPath:string)
                 fs.rmSync(dir,{recursive:true,force:true})
             }else{
                 saveJson(refPath,refCount);
-                let config=tryLoadJson<any>(tsConfig);
-                if(typeof config !== 'object'){
-                    config={}
-                }
-                const ary:string[]|undefined=config.compilerOptions?.paths?.[target.packageName];
-                if(ary){
-                    while(true){
-                        const i=ary.indexOf(entryPath);
-                        if(i===-1){
-                            break;
-                        }
-                        ary.splice(i,1);
+                if(entryPath){
+                    let config=tryLoadJson<any>(tsConfig);
+                    if(typeof config !== 'object'){
+                        config={}
                     }
-                    saveJson(tsConfig,config,2);
+                    const ary:string[]|undefined=config.compilerOptions?.paths?.[target.packageName];
+                    if(ary){
+                        while(true){
+                            const i=ary.indexOf(entryPath);
+                            if(i===-1){
+                                break;
+                            }
+                            ary.splice(i,1);
+                        }
+                        saveJson(tsConfig,config,2);
+                    }
                 }
 
             }

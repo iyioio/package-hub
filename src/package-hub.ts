@@ -2,13 +2,13 @@
 
 import chalk from 'chalk';
 import * as fs from 'fs';
-import { dbDir, loadJson, lockDir, setVerbose, takeArgs, verbose } from './common';
-import { exit, processInit } from './process';
-import { useTargetProject } from './target';
-import { runHub } from './hub';
-import { ArgConfig } from './types';
 import path from 'path';
+import { dbDir, loadJson, lockDir, setVerbose, sleep, takeArgs, verbose } from './common';
+import { runHub } from './hub';
 import { initMetroTemplate, loadExtraNodeModules, metroConfigFile } from './metro-template';
+import { exit, processInit } from './process';
+import { cleanAllTargetProjects, cleanTargetProjects, useTargetProject } from './target';
+import { ArgConfig } from './types';
 
 
 function main(){
@@ -31,6 +31,8 @@ function main(){
     let args=[...process.argv];
 
     let keepAlive=false;
+
+    let clean=false;
 
     args.splice(0,2);
 
@@ -70,9 +72,11 @@ function main(){
                 break;
 
             case "-hub":
-                keepAlive=true;
-                for(const a of cmdArgs){
-                    runHub(a,sessionName);
+                if(!clean){
+                    keepAlive=true;
+                    for(const a of cmdArgs){
+                        runHub(a,sessionName);
+                    }
                 }
                 break;
 
@@ -81,10 +85,16 @@ function main(){
                 break;
             
             case '-use':
-                keepAlive=true;
-                for(const p of targetProjects){
+                if(clean){
                     for(const pk of cmdArgs){
-                        useTargetProject(p,pk,deleteCache,sessionName);
+                        cleanTargetProjects(pk,targetProjects.length?targetProjects:undefined);
+                    }
+                }else{
+                    keepAlive=true;
+                    for(const p of targetProjects){
+                        for(const pk of cmdArgs){
+                            useTargetProject(p,pk,deleteCache,sessionName);
+                        }
                     }
                 }
                 break;
@@ -95,6 +105,18 @@ function main(){
 
             case '-get-metro-modules':
                 console.log(loadExtraNodeModules(path.join(cmdArgs[0]||'.',metroConfigFile)));
+                break;
+
+            case '-clean':
+                if(cmdArgs[0]?.toLowerCase()==='all'){
+                    cleanAllTargetProjects()
+                }else{
+                    clean=cmdArgs.length?Boolean(cmdArgs[0]):true;
+                }
+                break;
+
+            case '-sleep':
+                sleep(Number(cmdArgs[0])||0);
                 break;
 
             default:
@@ -108,6 +130,31 @@ function main(){
     }
 }
 
+const pathArgNames=['-hub','-target','-config']
+
+function normalizeArgs(args:string[],configPath:string):string[]
+{
+    args=[...args];
+    
+    const dir=path.resolve(path.dirname(configPath));
+
+    for(let i=0;i<args.length;i++){
+        if(pathArgNames.includes(args[i])){
+            i++;
+            for(;i<args.length;i++){
+                let v=args[i];
+                if(v.startsWith('-')){
+                    break;
+                }
+                v=path.isAbsolute(v)?v:path.resolve(path.join(dir,v));
+                args[i]=v;
+            }
+        }
+    }
+
+    return args;
+}
+
 function loadConfig(configPath:string):string[]
 {
     const config=loadJson<ArgConfig>(configPath);
@@ -117,7 +164,17 @@ function loadConfig(configPath:string):string[]
     let args:string[]=[];
 
     if(config.preArgs!==undefined){
-        args=[...args,...config.preArgs]
+        args=[...args,...normalizeArgs(config.preArgs,configPath)]
+    }
+
+    if(config.sleep!==undefined){
+        args.push('-sleep');
+        args.push(config.sleep.toString())
+    }
+
+    if(config.clean!==undefined){
+        args.push('-clean');
+        args.push(config.clean==='all'?'all':config.clean?'true':'false')
     }
 
     if(config.session!==undefined){
@@ -157,7 +214,7 @@ function loadConfig(configPath:string):string[]
     }
 
     if(config.args!==undefined){
-        args=[...args,...config.args]
+        args=[...args,...normalizeArgs(config.args,configPath)]
     }
 
     if(config.extends!==undefined){

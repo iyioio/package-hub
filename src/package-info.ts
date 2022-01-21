@@ -1,6 +1,7 @@
-import { dbDir, escapePackageName, lockDir, lockSync } from "./common";
 import * as fs from 'fs';
 import path from "path";
+import { dbDir, escapePackageName, lockDir, lockSync } from "./common";
+import { isTargetLinked, unlinkTarget } from './hub';
 import { PackageInfo, ProjectTarget } from "./types";
 
 export function getPackageInfo(packageName:string):PackageInfo
@@ -24,24 +25,64 @@ export function getPackageInfo(packageName:string):PackageInfo
             }
         });
     }
-    const cleanDb=(removePackage?:ProjectTarget)=>{
+    const cleanDb=(removePackage?:ProjectTarget,unlinkTargetPackage?:boolean)=>{
         lock(()=>{
+            if(!fs.existsSync(pkDbDir)){
+                return
+            }
             if(removePackage){
                 const idFile=path.join(pkDbDir,removePackage.id+'.json');
-                fs.unlinkSync(idFile);
+                if(fs.existsSync(idFile)){
+                    fs.unlinkSync(idFile);
+                }
             }
             const dirs=fs.readdirSync(pkDbDir);
             if(dirs.length===0){
                 fs.rmdirSync(pkDbDir);
             }
+            if(removePackage && unlinkTargetPackage && isTargetLinked(removePackage)){
+                unlinkTarget(removePackage);
+            }
+
         });
     }
+
+    const clearDb=()=>{
+        lock(()=>{
+            if(fs.existsSync(pkDbDir)){
+                fs.rmSync(pkDbDir,{recursive:true,force:true})
+            }
+        })
+    }
+
+    const getTargets=():ProjectTarget[]=>{
+        const targets:ProjectTarget[]=[];
+        lock(()=>{
+            if(!fs.existsSync(pkDbDir)){
+                return []
+            }
+            const files=fs.readdirSync(pkDbDir);
+            for(const file of files){
+                const filePath=path.join(pkDbDir,file);
+                if(!filePath.endsWith('.json')){
+                    continue;
+                }
+                try{
+                    targets.push(JSON.parse(fs.readFileSync(filePath).toString()));
+                }catch{}
+            }
+        });
+        return targets;
+    }
+
     return {
         escapedName,
         lockPath,
         pkDbDir,
         lock,
         createDb,
-        cleanDb
+        cleanDb,
+        clearDb,
+        getTargets
     }
 }

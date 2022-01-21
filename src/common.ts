@@ -1,10 +1,10 @@
+import chalk from 'chalk';
 import { parse } from 'comment-json';
 import * as fs from 'fs';
-import path from 'path';
-import lockfile from 'proper-lockfile';
 import os from 'os';
-import chalk from 'chalk';
+import path from 'path';
 import { stdout } from 'process';
+import lockfile from 'proper-lockfile';
 
 export const userDir=path.join(os.homedir(),'.package-hub');
 export const dbDir=path.join(userDir,'db');
@@ -45,6 +45,10 @@ export function saveJson(path:string, value:any, space?:number)
 
 export function escapePackageName(pkName:string){
     return pkName.replace(/\//g,'__SLASH__');
+}
+
+export function unescapePackageName(pkName:string){
+    return pkName.replace(/__SLASH__/g,'/');
 }
 
 

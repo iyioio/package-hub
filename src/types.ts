@@ -52,7 +52,9 @@ export interface PackageInfo
     pkDbDir:string;
     lock:(work:()=>void)=>void;
     createDb:(addPackage?:ProjectTarget)=>void;
-    cleanDb:(removePackage?:ProjectTarget)=>void;
+    cleanDb:(removePackage?:ProjectTarget,unlinkTargetPackage?:boolean)=>void;
+    clearDb:()=>void;
+    getTargets:()=>ProjectTarget[];
 }
 
 export interface ArgConfig {
@@ -66,4 +68,6 @@ export interface ArgConfig {
     args?:string[];
     preArgs?:string[];
     extends?:string[];
+    clean?:boolean|'all';
+    sleep?:number;
 }

@@ -1,10 +1,10 @@
+import * as fs from 'fs';
 import path from "path";
 import { v4 as uuid } from 'uuid';
-import { backupExtension } from "./common";
+import { backupExtension, dbDir, unescapePackageName } from "./common";
 import { getPackageInfo } from "./package-info";
 import { onExit } from "./process";
 import { ProjectTarget } from "./types";
-import * as fs from 'fs';
 
 export function useTargetProject(projectPath:string, packageName:string, deleteCache:boolean, sessionName:string)
 {
@@ -47,4 +47,31 @@ export function useTargetProject(projectPath:string, packageName:string, deleteC
     })
 
     createDb(target);
+}
+
+export function cleanAllTargetProjects()
+{
+    const names=fs.readdirSync(dbDir).map(n=>unescapePackageName(n));
+    for(const name of names){
+        cleanTargetProjects(name);
+    }
+
+}
+
+export function cleanTargetProjects(packageName:string, projectPaths?:string[])
+{
+
+    if(projectPaths){
+        projectPaths=projectPaths.map(p=>path.resolve(p))
+    }
+
+    const {getTargets,cleanDb}=getPackageInfo(packageName);
+
+    const targets=getTargets();
+
+    for(const target of targets){
+        if(!projectPaths || projectPaths.includes(target.projectPath)){
+            cleanDb(target,true);
+        }
+    }
 }
