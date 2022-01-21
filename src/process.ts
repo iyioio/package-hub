@@ -54,7 +54,7 @@ export function exit(code?:number, quite?:boolean)
     const listeners=exitListeners;
     exitListeners=[];
     if(!quite){
-        console.log(chalk.blue(`\nEnding ${listeners.length} task(s) with code ${code||0}`));
+        console.info(chalk.blue(`\nEnding ${listeners.length} task(s) with code ${code||0}`));
     }
     for(const d of listeners){
         try{

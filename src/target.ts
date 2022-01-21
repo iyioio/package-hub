@@ -19,7 +19,7 @@ export function useTargetProject(projectPath:string, packageName:string, deleteC
                 try{
                     fs.rmSync(cachePath,{recursive:true,force:true});
                 }catch(ex:any){
-                    console.log('delete node_modules cached failed - '+cachePath,ex);
+                    console.error('delete node_modules cached failed - '+cachePath,ex);
                 }
             }
         }

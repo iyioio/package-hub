@@ -104,7 +104,7 @@ function main(){
                 break;
 
             case '-get-metro-modules':
-                console.log(loadExtraNodeModules(path.join(cmdArgs[0]||'.',metroConfigFile)));
+                console.info(loadExtraNodeModules(path.join(cmdArgs[0]||'.',metroConfigFile)));
                 break;
 
             case '-clean':
