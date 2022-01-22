@@ -1,0 +1,14 @@
+{
+    "verbose":true,
+    "deleteCache":true,
+    "hubs":[
+        "./example"
+    ],
+    "targets":[
+        "./example/cool-web-site/"
+    ],
+    "use":[
+        "@iyio/example-project-math",
+        "@iyio/example-project-strings"
+    ]
+}
