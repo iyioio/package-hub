@@ -1,27 +1,71 @@
 # pkhub
-A tool to simplify package sharing in mono-repos and packages outside of a project's root directory
+A tool to simplify typescript package sharing in mono-repos and packages outside of a project's root directory
 
 
 <br/><br/>
 
 ## What does pkhub do?
-Package-hub allows you to define a collection of source packages and link them
-to target projects.
+pkhub allows you to develop npm packages while using them in other projects. pkhub is similar to
+*npm link* but does not rely on symlinks. With pkhub you can use code outside of the root of a 
+projects directory and preserve code navigation and hot-reloading.
 
-For example, say you have a React website and 2 supporting npm library packages that live out side of
-the root the main website. You could use pkhub to link the 2 supporting libraries as 
-node_modules. While the libraries are linked you can edit both the main website and the supporting
-libraries with support for hot-reloading and code navigation.
+
+<br/><br/>
+
+## How does pkhub work?
+pkhub performs 2 primary actions.
+
+1. Watches source packages for changes - By default pkhub uses ts-node in watch mode to
+   continuously build source packages.
+
+2. Links source package to target projects - When a target project is said to use a package the dist
+   output of the used package is copied to the node_modules of the target project. A backup copy of
+   original package folder in node_modules is make an restored when pkhub exists.
+   
+Since pkhub directly manipulates the node_modules of the target project no additional configuration
+is needed and make pkhub compatible with nearly all build systems including ReactNative and metro.
+
+Symlinks can optionally be used instead of coping output files. But in most casing dist output
+coping is more reliable although more resource intensive.
 
 
 <br/><br/>
 
 ## Examples
+The examples below deminstrate how you can use pkhub to develop a React website and 2 supporting
+npm library packages at the same time. The supporting libraries live outside of the main React
+website and are npm packages. While pkhub is running the both the supporting and main website can be
+edited and hot-reloading and code navigation work as if the supporting libraries were part of the
+main React website code base.
+
+<br/>
+
+### Example File Structure
+One react website and 2 typescript libraries
+
+``` txt
+example
+  |
+  + - cool-web-site ( React website )
+  |     |
+  |     + - package.json
+  |
+  + - packages
+        |
+        + - math ( typescript library )
+        |     |
+        |     + - package.json
+        |
+        + - strings ( typescript library )
+              |
+              + - package.json
+```
+
 
 <br/>
 
 ### Using a config file
-This example uses a configuration file to build a script the 
+This example uses a config file named example-config.json
 
 example-config.json
 ``` json
@@ -49,7 +93,7 @@ npx pkhub example-config.json
 
 ### Using cli arguments
 This example uses cli arguments as a script to run pkhub. The command below is equivalent to using
-pkhub with the above config file.
+pkhub with the example-config.json file.
 
 ``` sh
 npx pkhub -verbose -delete-cache \
@@ -62,7 +106,7 @@ npx pkhub -verbose -delete-cache \
 
 ## Using pkhub as a library
 pkhub can also be used as a function in other projects. The example below is equivalent to using
-pkhub with the above config file.
+pkhub with the  example-config.json file.
 
 ``` ts
 import { runPackageHub } from '@iyio/package-hub';
@@ -278,9 +322,11 @@ only the packages property is used.
 <br/><br/>
 
 ## Clean up
-If the pkhub command is not shutdown gracefully target projects can be left in a non operational
-state. To fix this run pkhub with the -clean flag. Make sure the first argument is the -clean flag.
-The order of the arguments are important
+Durning normal operation pkhub preforms clean up automatically when exiting but if pkhub does not 
+shutdown gracefully target projects can be left in a non operational state. To fix this you can run
+pkhub in clean up mode by using the -clean flag. Make sure the first argument is the -clean flag.
+The order of the arguments are important.
+
 ``` sh
 
 # clean projects based on the local config file

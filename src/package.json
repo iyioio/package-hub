@@ -1,7 +1,7 @@
 {
   "name": "@iyio/package-hub",
-  "version": "0.9.0",
-  "description": "A tool to simplify package sharing in mono-repos and packages outside of a project's root directory",
+  "version": "1.0.0",
+  "description": "A tool to simplify typescript package sharing in mono-repos and packages outside of a project's root directory",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
