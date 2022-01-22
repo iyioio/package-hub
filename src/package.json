@@ -2,8 +2,8 @@
   "name": "@iyio/package-hub",
   "version": "0.8.0",
   "description": "A tool to simplify package sharing in mono-repos and packages outside of a project's root directory",
-  "main": "dist/package-hub.js",
-  "types": "dist/package-hub.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/iyioio/package-hub.git"
@@ -16,7 +16,7 @@
     "build-publish": "npm run build && npm publish"
   },
   "bin": {
-    "pkhub": "dist/package-hub.js"
+    "pkhub": "dist/pkhub.js"
   },
   "keywords": [
     "monorepo",

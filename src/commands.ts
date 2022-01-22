@@ -1,17 +1,26 @@
-#!/usr/bin/env node
-
-import chalk from 'chalk';
 import * as fs from 'fs';
 import path from 'path';
-import { dbDir, loadJson, lockDir, setVerbose, sleep, takeArgs, verbose } from './common';
+import { dbDir, loadJson, lockDir, setVerbose, sleep, takeArgs } from './common';
 import { runHub } from './hub';
 import { initMetroTemplate, loadExtraNodeModules, metroConfigFile } from './metro-template';
 import { exit, processInit } from './process';
 import { cleanAllTargetProjects, cleanTargetProjects, useTargetProject } from './target';
 import { ArgConfig } from './types';
 
+export interface PackageHubRunOptions
+{
+    args:string[];
+    exitAtEnd?:boolean;
+}
 
-function main(){
+export function runPackageHub(config:ArgConfig):number
+{
+    return runPackageHubWithOptions({args:configToArgs(config)})
+}
+
+export function runPackageHubWithOptions({args,exitAtEnd}:PackageHubRunOptions):number
+{
+    args=[...args];
 
     if(!fs.existsSync(dbDir)){
         fs.mkdirSync(dbDir,{recursive:true});
@@ -27,8 +36,6 @@ function main(){
     let targetProjects:string[]=[];
 
     let deleteCache=false;
-
-    let args=[...process.argv];
 
     let keepAlive=false;
 
@@ -65,7 +72,7 @@ function main(){
 
             case '-config':
                 for(const a of cmdArgs){
-                    args=[...args,...loadConfig(a)];
+                    args=[...args,...loadConfigFile(a)];
                 }
                 break;
 
@@ -73,7 +80,11 @@ function main(){
                 if(dryRun){
                     console.info('dryRun skip -exit',{cmdArgs});
                 }else{
-                    exit(Number(cmdArgs[0]||0));
+                    const code=Number(cmdArgs[0]||0)
+                    if(exitAtEnd){
+                        exit(code);
+                    }
+                    return code;
                 }
                 break;
 
@@ -167,9 +178,11 @@ function main(){
         i+=cmdArgs.length;
     }
 
-    if(!keepAlive){
+    if(!keepAlive && exitAtEnd){
         exit(0,true);
     }
+
+    return 0;
 }
 
 const pathArgNames=['-hub','-target','-config']
@@ -197,7 +210,12 @@ function normalizeArgs(args:string[],configPath:string):string[]
     return args;
 }
 
-function loadConfig(configPath:string, configValue?:ArgConfig):string[]
+export function configToArgs(config:ArgConfig, directory?:string):string[]
+{
+    return loadConfigFile(directory?path.join(directory,'_.json'):'_.json',config);
+}
+
+export function loadConfigFile(configPath:string, configValue?:ArgConfig):string[]
 {
     const config=configValue ?? loadJson<ArgConfig>(configPath);
     
@@ -269,7 +287,7 @@ function loadConfig(configPath:string, configValue?:ArgConfig):string[]
 
         for(const scope of config.scopes){
 
-            const scopedArgs=loadConfig(configPath,scope);
+            const scopedArgs=loadConfigFile(configPath,scope);
             for(const a of scopedArgs){
                 args.push(a);
             }
@@ -300,16 +318,4 @@ function loadConfig(configPath:string, configValue?:ArgConfig):string[]
     }
 
     return args;
-}
-
-try{
-    main()
-}catch(ex:any){
-    if(verbose){
-        console.error(chalk.red('package-hub encountered an error'),ex);
-    }else{
-        console.error(chalk.red('package-hub encountered an error'),ex.message);
-    }
-    exit();
-    process.exitCode=1;
 }
