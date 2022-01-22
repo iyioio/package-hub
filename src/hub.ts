@@ -7,36 +7,14 @@ import { loadJson, lockSync, saveJson, tryLoadJson } from "./common";
 import { addMetroPackage, metroConfigFile, removeMetroPackage } from "./metro-template";
 import { getPackageInfo } from "./package-info";
 import { cmd, exit, kill, onExit } from "./process";
-import { HubConfig, PackageConfig, ProjectTarget } from "./types";
+import { PackageConfig, ProjectTarget } from "./types";
 
 
-export function runHub(configPath:string, sessionName:string)
-{
 
-    if(!configPath.toLowerCase().endsWith('.json')){
-        configPath=path.join(configPath,'package-hub.json');
-    }
-
-    if(!fs.existsSync(configPath)){
-        throw new Error(configPath+' does not exist');
-    }
-
-    console.info(chalk.green('Running Package-Hub '+configPath));
-
-    const config=loadJson<HubConfig>(configPath);
-
-    const hubDir=path.dirname(configPath);
-
-    for(const pkConfig of config.packages){
-        runPackage(hubDir,pkConfig);
-    }
-}
-
-
-function runPackage(hubDir:string, pkConfig:PackageConfig)
+export function runPackage(pkConfig:PackageConfig, hubDir?:string)
 {
     pkConfig={...pkConfig}
-    let pkJsonPath=path.join(hubDir,pkConfig.path);
+    let pkJsonPath=hubDir?path.join(hubDir,pkConfig.path):pkConfig.path;
     if(!pkJsonPath.toLowerCase().endsWith('.json')){
         pkJsonPath=path.join(pkJsonPath,'package.json');
     }
@@ -47,7 +25,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
         throw new Error(pkJsonPath+' does not exist');
     }
 
-    console.info(chalk.blueBright('Start '+pkJsonPath))
+    console.info(chalk.blueBright('Start Package '+pkJsonPath))
 
     const pk=loadJson<any>(pkJsonPath);
 
@@ -105,7 +83,7 @@ function runPackage(hubDir:string, pkConfig:PackageConfig)
 
 
     const cleanup=()=>{
-        console.info(chalk.blueBright('Stop '+pkJsonPath));
+        console.info(chalk.blueBright('Stop Package '+pkJsonPath));
         kill(proc);
         update(true);
         cleanDb();

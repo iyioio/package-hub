@@ -1,11 +1,12 @@
 import * as fs from 'fs';
 import path from 'path';
+import { PackageConfig } from '.';
 import { dbDir, loadJson, lockDir, setVerbose, sleep, takeArgs } from './common';
-import { runHub } from './hub';
+import { runPackage } from './hub';
 import { initMetroTemplate, loadExtraNodeModules, metroConfigFile } from './metro-template';
 import { exit, processInit } from './process';
 import { cleanAllTargetProjects, cleanTargetProjects, useTargetProject } from './target';
-import { ArgConfig } from './types';
+import { PackageHubConfig } from './types';
 
 export interface PackageHubRunOptions
 {
@@ -13,7 +14,7 @@ export interface PackageHubRunOptions
     exitAtEnd?:boolean;
 }
 
-export function runPackageHub(config:ArgConfig):number
+export function runPackageHub(config:PackageHubConfig):number
 {
     return runPackageHubWithOptions({args:configToArgs(config)})
 }
@@ -76,6 +77,16 @@ export function runPackageHubWithOptions({args,exitAtEnd}:PackageHubRunOptions):
                 }
                 break;
 
+            case "-hub":
+                let insert=i+1+cmdArgs.length;
+                for(const a of cmdArgs){
+                    const loadedArgs=loadHubConfigFile(a);
+                    for(const la of loadedArgs){
+                        args.splice(insert++,0,la);
+                    }
+                }
+                break;
+
             case '-exit':
                 if(dryRun){
                     console.info('dryRun skip -exit',{cmdArgs});
@@ -96,14 +107,20 @@ export function runPackageHubWithOptions({args,exitAtEnd}:PackageHubRunOptions):
                 sessionName=cmdArgs[0]||'default';
                 break;
 
-            case "-hub":
+            case "-package":
                 if(!clean){
                     if(dryRun){
-                        console.info('dryRun skip -hub',{cmdArgs});
+                        console.info('dryRun skip -package',{cmdArgs});
                     }else{
                         keepAlive=true;
-                        for(const a of cmdArgs){
-                            runHub(a,sessionName);
+                        for(const pkPath of cmdArgs){
+                            let pkc:PackageConfig;
+                            if(pkPath.startsWith('{')){
+                                pkc=JSON.parse(pkPath);
+                            }else{
+                                pkc={path:pkPath}
+                            }
+                            runPackage(pkc);
                         }
                     }
                 }
@@ -185,7 +202,7 @@ export function runPackageHubWithOptions({args,exitAtEnd}:PackageHubRunOptions):
     return 0;
 }
 
-const pathArgNames=['-hub','-target','-config']
+const pathArgNames=['-hub','-target','-config','-package']
 
 function normalizeArgs(args:string[],configPath:string):string[]
 {
@@ -201,8 +218,10 @@ function normalizeArgs(args:string[],configPath:string):string[]
                 if(v.startsWith('-')){
                     break;
                 }
-                v=path.isAbsolute(v)?v:path.resolve(path.join(dir,v));
-                args[i]=v;
+                if(!v.startsWith('{')){
+                    v=path.isAbsolute(v)?v:path.resolve(path.join(dir,v));
+                    args[i]=v;
+                }
             }
         }
     }
@@ -210,14 +229,42 @@ function normalizeArgs(args:string[],configPath:string):string[]
     return args;
 }
 
-export function configToArgs(config:ArgConfig, directory?:string):string[]
+export function configToArgs(config:PackageHubConfig, directory?:string):string[]
 {
     return loadConfigFile(directory?path.join(directory,'_.json'):'_.json',config);
 }
 
-export function loadConfigFile(configPath:string, configValue?:ArgConfig):string[]
+function pushPackageArgs(args:string[], dir:string, packages:PackageConfig[])
 {
-    const config=configValue ?? loadJson<ArgConfig>(configPath);
+    args.push('-package');
+    for(const p of packages){
+        const pk={...p}
+        pk.path=path.isAbsolute(p.path)?p.path:path.resolve(path.join(dir,p.path));
+        args.push(JSON.stringify(pk));
+    }
+}
+
+export function loadHubConfigFile(configPath:string, configValue?:PackageHubConfig):string[]
+{
+    if(fs.existsSync(configPath) && fs.statSync(configPath).isDirectory()){
+        configPath=path.join(configPath,'package-hub.json');
+    }
+    const config=configValue ?? loadJson<PackageHubConfig>(configPath);
+    
+    const dir=path.dirname(configPath);
+
+    let args:string[]=[];
+
+    if(config.packages!==undefined){
+        pushPackageArgs(args,dir,config.packages)
+    }
+
+    return args;
+}
+
+export function loadConfigFile(configPath:string, configValue?:PackageHubConfig):string[]
+{
+    const config=configValue ?? loadJson<PackageHubConfig>(configPath);
     
     const dir=path.dirname(configPath);
 
@@ -264,6 +311,10 @@ export function loadConfigFile(configPath:string, configValue?:ArgConfig):string
         }
     }
 
+    if(config.packages!==undefined){
+        pushPackageArgs(args,dir,config.packages)
+    }
+
     if(config.targets!==undefined){
         args.push('-target');
         for(const p of config.targets){
@@ -301,9 +352,9 @@ export function loadConfigFile(configPath:string, configValue?:ArgConfig):string
         args=[...args,...normalizeArgs(config.args,configPath)]
     }
 
-    if(config.extends!==undefined){
+    if(config.include!==undefined){
         args.push("-config");
-        for(const p of config.extends){
+        for(const p of config.include){
             args.push(path.isAbsolute(p)?p:path.join(dir,p));
         }
     }
