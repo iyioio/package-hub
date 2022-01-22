@@ -1,8 +1,7 @@
 import * as fs from 'fs';
 import path from "path";
 import { v4 as uuid } from 'uuid';
-import { loadJson } from '.';
-import { backupExtension, dbDir, unescapePackageName } from "./common";
+import { backupExtension, dbDir, loadJson, unescapePackageName } from "./common";
 import { getPackageInfo } from "./package-info";
 import { onExit } from "./process";
 import { ProjectTarget, ProjectTargetConfig } from "./types";

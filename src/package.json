@@ -2,8 +2,8 @@
   "name": "@iyio/package-hub",
   "version": "1.0.0",
   "description": "A tool to simplify typescript package sharing in mono-repos and packages outside of a project's root directory",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/package-hub-index.js",
+  "types": "dist/package-hub-index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/iyioio/package-hub.git"
@@ -20,7 +20,8 @@
   },
   "keywords": [
     "monorepo",
-    "mono-repo"
+    "mono-repo",
+    "npm-link"
   ],
   "author": "Scott Vance",
   "license": "ISC",

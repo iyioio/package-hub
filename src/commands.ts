@@ -1,12 +1,11 @@
 import * as fs from 'fs';
 import path from 'path';
-import { PackageConfig } from '.';
 import { dbDir, loadJson, lockDir, setVerbose, sleep, takeArgs } from './common';
 import { runPackage } from './hub';
 import { initMetroTemplate, loadExtraNodeModules, metroConfigFile } from './metro-template';
 import { exit, processInit } from './process';
 import { cleanAllTargetProjects, cleanTargetProjects, useTargetProject } from './target';
-import { PackageHubConfig } from './types';
+import { PackageConfig, PackageHubConfig } from './types';
 
 export interface PackageHubRunOptions
 {
