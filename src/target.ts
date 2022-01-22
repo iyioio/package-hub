@@ -1,16 +1,30 @@
 import * as fs from 'fs';
 import path from "path";
 import { v4 as uuid } from 'uuid';
+import { loadJson } from '.';
 import { backupExtension, dbDir, unescapePackageName } from "./common";
 import { getPackageInfo } from "./package-info";
 import { onExit } from "./process";
-import { ProjectTarget } from "./types";
+import { ProjectTarget, ProjectTargetConfig } from "./types";
 
 export function useTargetProject(projectPath:string, packageName:string, deleteCache:boolean, sessionName:string)
 {
     projectPath=path.resolve(projectPath);
     const id=uuid();
     const np=path.join(projectPath,'node_modules',packageName.split('..').join('__'));
+    const projectConfigPath=path.join(projectPath,'pkhub-target.json');
+
+    let projectConfig:ProjectTargetConfig;
+
+    if(fs.existsSync(projectConfigPath)){
+        projectConfig=loadJson<ProjectTargetConfig>(projectConfigPath)
+    }else{
+        projectConfig={copyDist:true}
+    }
+
+    if(!projectConfig.symlink && projectConfig.copyDist===undefined){
+        projectConfig.copyDist=true;
+    }
 
     const _deleteCache=()=>{
         if(deleteCache){
@@ -27,16 +41,13 @@ export function useTargetProject(projectPath:string, packageName:string, deleteC
 
     _deleteCache();
 
-    const isMetro=fs.existsSync(path.join(projectPath,'metro.config.js'));
-
     const target:ProjectTarget={
         id,
         projectPath,
         packageName,
         nodeModulePath:np,
         nodeModuleBackupPath:np+backupExtension,
-        noSymlink:isMetro,
-        copyDist:isMetro
+        ...projectConfig,
     }
 
     const {createDb,cleanDb}=getPackageInfo(packageName);

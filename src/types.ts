@@ -127,15 +127,27 @@ export interface PackageConfig
     watch?:string|false;
 }
 
-export interface ProjectTarget
+export interface ProjectTargetConfig
+{
+    /**
+     * If true packages will be linked using symlinks
+     */
+    symlink?:boolean;
+
+    /**
+     * If true packages will be linked by coping the dist output from each package.
+     * Default is true if symlink is false or undefined
+     */
+    copyDist?:boolean;
+}
+
+export interface ProjectTarget extends ProjectTargetConfig
 {
     id:string;
     projectPath:string;
     nodeModulePath:string;
     nodeModuleBackupPath?:string;
     packageName:string;
-    noSymlink?:boolean;
-    copyDist?:boolean;
 }
 
 export interface PackageInfo

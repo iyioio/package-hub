@@ -226,7 +226,7 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
         saveJson(refPath,refCount);
     });
 
-    if(!target.noSymlink || target.copyDist){
+    if(target.symlink || target.copyDist){
         if(target.nodeModuleBackupPath && !fs.existsSync(target.nodeModuleBackupPath))
         {
             if(fs.existsSync(target.nodeModulePath)){
@@ -236,14 +236,12 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
             }
         }
 
-        if(!target.noSymlink){
-            fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
-        }
-
         if(target.copyDist){
             fs.mkdirSync(target.nodeModulePath);
             fs.copyFileSync(path.join(pkDir,'package.json'),path.join(target.nodeModulePath,'package.json'))
             fse.copySync(distPath,path.join(target.nodeModulePath,outDir))
+        }else if(target.symlink){
+            fs.symlinkSync(path.resolve(pkDir),target.nodeModulePath);
         }
     }
 }
@@ -258,12 +256,12 @@ export function unlinkTarget(target:ProjectTarget, entryPath?:string)
 {
     console.info(chalk.cyanBright(`unlink ${target.packageName} - ${target.nodeModulePath}`));
 
-    if(!target.noSymlink || target.copyDist){
-        if(!target.noSymlink){
-            fs.unlinkSync(target.nodeModulePath);
-        }
+    if(target.symlink || target.copyDist){
+
         if(target.copyDist){
             fs.rmSync(target.nodeModulePath,{recursive:true,force:true})
+        }else if(target.symlink){
+            fs.unlinkSync(target.nodeModulePath);
         }
 
         if(target.nodeModuleBackupPath && fs.existsSync(target.nodeModuleBackupPath))
