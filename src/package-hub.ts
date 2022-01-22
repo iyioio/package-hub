@@ -34,6 +34,8 @@ function main(){
 
     let clean=false;
 
+    let dryRun=false;
+
     args.splice(0,2);
 
     if(args.length && args[0][0]!=='-'){
@@ -54,7 +56,11 @@ function main(){
 
             case '-verbose':
             case '-v':
-                setVerbose(cmdArgs.length?Boolean(cmdArgs[0]):true);
+                setVerbose(cmdArgs.length?JSON.parse(cmdArgs[0]):true);
+                break;
+
+            case '-dry-run':
+                dryRun=cmdArgs.length?JSON.parse(cmdArgs[0]):true;
                 break;
 
             case '-config':
@@ -64,11 +70,15 @@ function main(){
                 break;
 
             case '-exit':
-                exit(Number(cmdArgs[0]||0));
+                if(dryRun){
+                    console.info('dryRun skip -exit',{cmdArgs});
+                }else{
+                    exit(Number(cmdArgs[0]||0));
+                }
                 break;
 
             case '-delete-cache':
-                deleteCache=cmdArgs.length?Boolean(cmdArgs[0]):true;
+                deleteCache=cmdArgs.length?JSON.parse(cmdArgs[0]):true;
                 break;
 
             case '-session':
@@ -77,9 +87,13 @@ function main(){
 
             case "-hub":
                 if(!clean){
-                    keepAlive=true;
-                    for(const a of cmdArgs){
-                        runHub(a,sessionName);
+                    if(dryRun){
+                        console.info('dryRun skip -hub',{cmdArgs});
+                    }else{
+                        keepAlive=true;
+                        for(const a of cmdArgs){
+                            runHub(a,sessionName);
+                        }
                     }
                 }
                 break;
@@ -89,22 +103,30 @@ function main(){
                 break;
             
             case '-use':
-                if(clean){
-                    for(const pk of cmdArgs){
-                        cleanTargetProjects(pk,targetProjects.length?targetProjects:undefined);
-                    }
+                if(dryRun){
+                    console.info('dryRun skip -use ',{targetProjects,cmdArgs});
                 }else{
-                    keepAlive=true;
-                    for(const p of targetProjects){
+                    if(clean){
                         for(const pk of cmdArgs){
-                            useTargetProject(p,pk,deleteCache,sessionName);
+                            cleanTargetProjects(pk,targetProjects.length?targetProjects:undefined);
+                        }
+                    }else{
+                        keepAlive=true;
+                        for(const p of targetProjects){
+                            for(const pk of cmdArgs){
+                                useTargetProject(p,pk,deleteCache,sessionName);
+                            }
                         }
                     }
                 }
                 break;
 
             case '-init-metro':
-                initMetroTemplate(cmdArgs[0]||'.');
+                if(dryRun){
+                    console.info('dryRun skip -init-metro',{cmdArgs});
+                }else{
+                    initMetroTemplate(cmdArgs[0]||'.');
+                }
                 break;
 
             case '-get-metro-modules':
@@ -113,14 +135,30 @@ function main(){
 
             case '-clean':
                 if(cmdArgs[0]?.toLowerCase()==='all'){
-                    cleanAllTargetProjects()
+                    if(dryRun){
+                        console.info('dryRun skip -clean',{cmdArgs});
+                    }else{
+                        cleanAllTargetProjects();
+                    }
                 }else{
-                    clean=cmdArgs.length?Boolean(cmdArgs[0]):true;
+                    clean=cmdArgs.length?JSON.parse(cmdArgs[0]):true;
                 }
                 break;
 
             case '-sleep':
-                sleep(Number(cmdArgs[0])||0);
+                if(dryRun){
+                    console.info('dryRun skip -sleep',{cmdArgs});
+                }else{
+                    sleep(Number(cmdArgs[0])||0);
+                }
+                break;
+
+            case '-print-args':
+                console.info(JSON.stringify({
+                    index:i,
+                    length:args.length,
+                    args
+                },null,4))
                 break;
 
             default:
@@ -159,13 +197,18 @@ function normalizeArgs(args:string[],configPath:string):string[]
     return args;
 }
 
-function loadConfig(configPath:string):string[]
+function loadConfig(configPath:string, configValue?:ArgConfig):string[]
 {
-    const config=loadJson<ArgConfig>(configPath);
+    const config=configValue ?? loadJson<ArgConfig>(configPath);
     
     const dir=path.dirname(configPath);
 
     let args:string[]=[];
+
+    if(config.dryRun!==undefined){
+        args.push('-dry-run');
+        args.push(config.dryRun?'true':'false');
+    }
 
     if(config.preArgs!==undefined){
         args=[...args,...normalizeArgs(config.preArgs,configPath)]
@@ -210,10 +253,29 @@ function loadConfig(configPath:string):string[]
         }
     }
 
+    if(config.target!==undefined){
+        args.push('-target');
+        args.push(path.isAbsolute(config.target)?config.target:path.join(dir,config.target));
+    }
+
     if(config.use!==undefined){
         args.push('-use');
         for(const u of config.use){
             args.push(u);
+        }
+    }
+
+    if(config.scopes){
+
+        for(const scope of config.scopes){
+
+            const scopedArgs=loadConfig(configPath,scope);
+            for(const a of scopedArgs){
+                args.push(a);
+            }
+
+            //resets the current targets so that each scope has its own targets
+            args.push('-target');
         }
     }
 
@@ -231,6 +293,10 @@ function loadConfig(configPath:string):string[]
     if(config.exit!==undefined){
         args.push('-exit');
         args.push(config.exit.toString())
+    }
+
+    if(config.printArgs){
+        args.push('-print-args');
     }
 
     return args;

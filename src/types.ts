@@ -64,10 +64,14 @@ export interface ArgConfig {
     deleteCache?:boolean;
     hubs?:string[];
     targets?:string[];
+    target?:string;
     use?:string[];
     args?:string[];
     preArgs?:string[];
     extends?:string[];
     clean?:boolean|'all';
     sleep?:number;
+    scopes?:ArgConfig[];
+    printArgs?:boolean;
+    dryRun?:boolean;
 }
