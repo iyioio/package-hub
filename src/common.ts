@@ -6,11 +6,11 @@ import path from 'path';
 import { stdout } from 'process';
 import lockfile from 'proper-lockfile';
 
-export const userDir=path.join(os.homedir(),'.package-hub');
+export const userDir=path.join(os.homedir(),'.pkhub');
 export const dbDir=path.join(userDir,'db');
 export const lockDir=path.join(userDir,'locks');
 
-export const backupExtension='.packagehub-backup';
+export const backupExtension='.pkbk';
 
 export function loadJson<T>(path:string):T{
     return parse(fs.readFileSync(path).toString())

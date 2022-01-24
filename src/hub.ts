@@ -111,7 +111,13 @@ export function runPackage(pkConfig:PackageConfig, hubDir?:string)
         try{
             let files:string[]=[];
             lock(()=>{
-                files=fs.readdirSync(pkDbDir);
+                try{
+                    if(fs.existsSync(pkDbDir)){
+                        files=fs.readdirSync(pkDbDir);
+                    }
+                }catch{
+                    console.warn(`read pkDbDir failed - ${pkDbDir}`);
+                }
             });
             const paths:string[]=[];
 
@@ -184,16 +190,16 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
         fs.writeFileSync(packagePath,'{}');
     }
 
-    const tsConfig=path.join(target.projectPath,'tsconfig.packagehub.json');
+    const tsConfig=path.join(target.projectPath,'tsconfig.pkhub.json');
 
     lockSync(packagePath,()=>{
-        const dir=path.join(target.projectPath,'.packagehub');
+        const dir=path.join(target.projectPath,'.pkhub');
         if(!fs.existsSync(dir)){
             fs.mkdirSync(dir);
         }
         const isTs=fs.existsSync(tsConfig);
         if(isTs){
-            const tsConfigBk=path.join(dir,'tsconfig.packagehub.json');
+            const tsConfigBk=path.join(dir,'tsconfig.pkhub.json');
             if(!fs.existsSync(tsConfigBk)){
                 fs.copyFileSync(tsConfig,tsConfigBk);
             }
@@ -248,7 +254,7 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
 
 export function isTargetLinked(target:ProjectTarget)
 {
-    const dir=path.join(target.projectPath,'.packagehub');
+    const dir=path.join(target.projectPath,'.pkhub');
     return fs.existsSync(dir);
 }
 
@@ -279,18 +285,18 @@ export function unlinkTarget(target:ProjectTarget, entryPath?:string)
         removeMetroPackage(metroPath,target.packageName);
     }
 
-    const tsConfig=path.join(target.projectPath,'tsconfig.packagehub.json');
+    const tsConfig=path.join(target.projectPath,'tsconfig.pkhub.json');
     const packagePath=path.join(target.projectPath,'package.json');
     if(fs.existsSync(packagePath)){
         lockSync(packagePath,()=>{
 
-            const dir=path.join(target.projectPath,'.packagehub');
+            const dir=path.join(target.projectPath,'.pkhub');
 
             const refPath=path.join(dir,'ref-count');
             const refCount=(tryLoadJson<number>(refPath)||0)-1;
 
             if(refCount<=0){
-                const tsConfigBk=path.join(dir,'tsconfig.packagehub.json');
+                const tsConfigBk=path.join(dir,'tsconfig.pkhub.json');
                 if(fs.existsSync(tsConfigBk)){
                     fs.copyFileSync(tsConfigBk,tsConfig);
                 }

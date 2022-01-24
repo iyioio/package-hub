@@ -246,7 +246,7 @@ function pushPackageArgs(args:string[], dir:string, packages:PackageConfig[])
 export function loadHubConfigFile(configPath:string, configValue?:PackageHubConfig):string[]
 {
     if(fs.existsSync(configPath) && fs.statSync(configPath).isDirectory()){
-        configPath=path.join(configPath,'package-hub.json');
+        configPath=path.join(configPath,'pkhub-config.json');
     }
     const config=configValue ?? loadJson<PackageHubConfig>(configPath);
     
@@ -263,6 +263,10 @@ export function loadHubConfigFile(configPath:string, configValue?:PackageHubConf
 
 export function loadConfigFile(configPath:string, configValue?:PackageHubConfig):string[]
 {
+    if(fs.existsSync(configPath) && fs.statSync(configPath).isDirectory()){
+        configPath=path.join(configPath,'pkhub-config.json');
+    }
+
     const config=configValue ?? loadJson<PackageHubConfig>(configPath);
     
     const dir=path.dirname(configPath);

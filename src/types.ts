@@ -61,7 +61,7 @@ export interface PackageHubConfig {
 
     /**
      * If true the targets and hubs of the config will be cleaned. If set to a value of 'all'
-     * then all targets defined in the ~/.package-hub/db directory will be cleaned. When a target
+     * then all targets defined in the ~/.pkhub/db directory will be cleaned. When a target
      * is cleaned it is restored to its state before pkhub started. This is useful for cases
      * when pkhub is not shutdown gracefully and leaves behind temp files and dead package links
      */

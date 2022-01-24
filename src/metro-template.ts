@@ -1,8 +1,8 @@
+import { parse } from 'comment-json';
 import * as fs from 'fs';
 import path from 'path';
-import { parse } from 'comment-json';
 
-export const metroConfigFile='metro.config.packagehub.js';
+export const metroConfigFile='metro.config.pkhub.js';
 
 export type ExtraNodeModules={[name:string]:string}
 
