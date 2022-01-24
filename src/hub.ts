@@ -185,14 +185,11 @@ function linkTarget(target:ProjectTarget, pkDir:string, distPath:string, outDir:
 {
     console.info(chalk.cyanBright(`link ${target.packageName} - ${pkDir} -> ${target.nodeModulePath}`))
     
-    const packagePath=path.join(target.projectPath,'package.json');
-    if(!fs.existsSync(packagePath)){
-        fs.writeFileSync(packagePath,'{}');
-    }
+    
 
     const tsConfig=path.join(target.projectPath,'tsconfig.pkhub.json');
 
-    lockSync(packagePath,()=>{
+    lockSync(target.projectPath,()=>{
         const dir=path.join(target.projectPath,'.pkhub');
         if(!fs.existsSync(dir)){
             fs.mkdirSync(dir);
@@ -286,43 +283,41 @@ export function unlinkTarget(target:ProjectTarget, entryPath?:string)
     }
 
     const tsConfig=path.join(target.projectPath,'tsconfig.pkhub.json');
-    const packagePath=path.join(target.projectPath,'package.json');
-    if(fs.existsSync(packagePath)){
-        lockSync(packagePath,()=>{
+    
+    lockSync(target.projectPath,()=>{
 
-            const dir=path.join(target.projectPath,'.pkhub');
+        const dir=path.join(target.projectPath,'.pkhub');
 
-            const refPath=path.join(dir,'ref-count');
-            const refCount=(tryLoadJson<number>(refPath)||0)-1;
+        const refPath=path.join(dir,'ref-count');
+        const refCount=(tryLoadJson<number>(refPath)||0)-1;
 
-            if(refCount<=0){
-                const tsConfigBk=path.join(dir,'tsconfig.pkhub.json');
-                if(fs.existsSync(tsConfigBk)){
-                    fs.copyFileSync(tsConfigBk,tsConfig);
+        if(refCount<=0){
+            const tsConfigBk=path.join(dir,'tsconfig.pkhub.json');
+            if(fs.existsSync(tsConfigBk)){
+                fs.copyFileSync(tsConfigBk,tsConfig);
+            }
+            fs.rmSync(dir,{recursive:true,force:true})
+        }else{
+            saveJson(refPath,refCount);
+            if(entryPath){
+                let config=tryLoadJson<any>(tsConfig);
+                if(typeof config !== 'object'){
+                    config={}
                 }
-                fs.rmSync(dir,{recursive:true,force:true})
-            }else{
-                saveJson(refPath,refCount);
-                if(entryPath){
-                    let config=tryLoadJson<any>(tsConfig);
-                    if(typeof config !== 'object'){
-                        config={}
-                    }
-                    const ary:string[]|undefined=config.compilerOptions?.paths?.[target.packageName];
-                    if(ary){
-                        while(true){
-                            const i=ary.indexOf(entryPath);
-                            if(i===-1){
-                                break;
-                            }
-                            ary.splice(i,1);
+                const ary:string[]|undefined=config.compilerOptions?.paths?.[target.packageName];
+                if(ary){
+                    while(true){
+                        const i=ary.indexOf(entryPath);
+                        if(i===-1){
+                            break;
                         }
-                        saveJson(tsConfig,config,2);
+                        ary.splice(i,1);
                     }
+                    saveJson(tsConfig,config,2);
                 }
-
             }
 
-        });
-    }
+        }
+
+    });
 }

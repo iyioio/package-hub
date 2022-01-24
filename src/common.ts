@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { parse } from 'comment-json';
 import * as fs from 'fs';
+import md5 from 'md5';
 import os from 'os';
 import path from 'path';
 import { stdout } from 'process';
@@ -28,8 +29,41 @@ export function tryLoadJson<T>(path:string):T|undefined{
     }
 }
 
+const lockChecks:{[path:string]:boolean}={}
 export function lockSync(lockPath:string,work:()=>void){
-    const release=lockfile.lockSync(lockPath);
+
+    if(!lockChecks[lockDir]){
+        if(!fs.existsSync(lockDir)){
+            fs.mkdirSync(lockDir,{recursive:true});
+        }
+        lockChecks[lockDir]=true;
+    }
+
+    lockPath=path.resolve(lockPath);
+
+    const lockFilePath=path.join(lockDir,md5(lockPath)).toString();
+
+    if(!lockChecks[lockFilePath]){
+        let attempt=0;
+        while(true){
+            try{
+                if(!fs.existsSync(lockFilePath)){
+                    fs.writeFileSync(lockFilePath,lockPath);
+                }
+                break;
+            }catch(ex:any){
+                console.error(`Unable to create lock - ${lockPath}`);
+            }
+            attempt++;
+            if(attempt>20){
+                throw new Error(`Unable to create lock after 20 attempts - ${lockPath}`)
+            }
+            sleep(1000);
+        }
+        lockChecks[lockFilePath]=true;
+    }
+
+    const release=lockfile.lockSync(lockFilePath);
     try{
         work();
     }finally{

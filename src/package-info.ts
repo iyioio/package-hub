@@ -1,19 +1,16 @@
 import * as fs from 'fs';
 import path from "path";
-import { dbDir, escapePackageName, lockDir, lockSync } from "./common";
+import { dbDir, escapePackageName, lockSync } from "./common";
 import { isTargetLinked, unlinkTarget } from './hub';
 import { PackageInfo, ProjectTarget } from "./types";
 
 export function getPackageInfo(packageName:string):PackageInfo
 {
     const escapedName=escapePackageName(packageName);
-    const lockPath=path.join(lockDir,escapedName);
+    const lockName='/__PACKAGES__/'+packageName;
     const pkDbDir=path.join(dbDir,escapedName);
-    if(!fs.existsSync(lockPath)){
-        fs.writeFileSync(lockPath,'.');
-    }
     const lock=(work:()=>void)=>{
-        lockSync(lockPath,work);
+        lockSync(lockName,work);
     }
     const createDb=(addPackage?:ProjectTarget)=>{
         lock(()=>{
@@ -77,7 +74,6 @@ export function getPackageInfo(packageName:string):PackageInfo
 
     return {
         escapedName,
-        lockPath,
         pkDbDir,
         lock,
         createDb,

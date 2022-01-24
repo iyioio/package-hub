@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import path from 'path';
-import { dbDir, loadJson, lockDir, setVerbose, sleep, takeArgs } from './common';
+import { dbDir, loadJson, setVerbose, sleep, takeArgs } from './common';
 import { runPackage } from './hub';
 import { initMetroTemplate, loadExtraNodeModules, metroConfigFile } from './metro-template';
 import { exit, processInit } from './process';
@@ -24,9 +24,6 @@ export function runPackageHubWithOptions({args,exitAtEnd}:PackageHubRunOptions):
 
     if(!fs.existsSync(dbDir)){
         fs.mkdirSync(dbDir,{recursive:true});
-    }
-    if(!fs.existsSync(lockDir)){
-        fs.mkdirSync(lockDir,{recursive:true});
     }
 
     processInit();

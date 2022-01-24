@@ -153,7 +153,6 @@ export interface ProjectTarget extends ProjectTargetConfig
 export interface PackageInfo
 {
     escapedName:string;
-    lockPath:string;
     pkDbDir:string;
     lock:(work:()=>void)=>void;
     createDb:(addPackage?:ProjectTarget)=>void;
